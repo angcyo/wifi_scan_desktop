@@ -304,9 +304,23 @@ namespace wifi_scan_desktop {
             throw "Error: WlanScan Failed " + dw3;
         }
 
-        // TODO stop if timeout?
+        // 5 second timeout
+        // Wireless network drivers that meet Windows logo requirements are required to complete a WlanScan function request in 4 seconds.
+        // https://learn.microsoft.com/zh-cn/windows/win32/api/wlanapi/nf-wlanapi-wlanscan#remarks
+        DWORD startTime = GetTickCount();
+        const DWORD timeoutMs = 5000;
+
         while (scanning) {
             Sleep(100);
+            
+            DWORD currentTime = GetTickCount();
+            if (currentTime - startTime >= timeoutMs) {
+                scanning = false;
+                if (event_sink_) {
+                    event_sink_->Error("Scan Error", "Scan timeout after 5 seconds");
+                }
+                break;
+            }
         }
 
         WlanRegisterNotification(hClient,
