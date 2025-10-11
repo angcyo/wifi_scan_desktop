@@ -10,6 +10,7 @@
 #include <flutter/plugin_registrar_windows.h>
 #include <flutter/standard_method_codec.h>
 
+#include <exception>
 #include <memory>
 #include <sstream>
 
@@ -32,6 +33,44 @@
 using json = nlohmann::json;
 using namespace std;
 #pragma comment(lib, "Wlanapi.lib")
+
+// Custom exception class for WiFi scan errors
+class WifiScanException : public exception {
+private:
+    string errorCode;
+    string errorMessage;
+public:
+    WifiScanException(const string& code, const string& msg) : errorCode(code), errorMessage(msg) {}
+    WifiScanException(const string& msg) : errorCode("wifi_scan_error"), errorMessage(msg) {}
+    
+    const char* what() const noexcept override {
+        return errorMessage.c_str();
+    }
+    
+    const string& getErrorCode() const { return errorCode; }
+    const string& getErrorMessage() const { return errorMessage; }
+};
+
+// Custom deleters for Windows API resources
+struct WlanHandleDeleter {
+    void operator()(HANDLE handle) const {
+        if (handle != NULL) {
+            WlanCloseHandle(handle, NULL);
+        }
+    }
+};
+
+struct WlanMemoryDeleter {
+    void operator()(PVOID memory) const {
+        if (memory != NULL) {
+            WlanFreeMemory(memory);
+        }
+    }
+};
+
+// Type aliases for smart pointers
+using WlanHandlePtr = std::unique_ptr<void, WlanHandleDeleter>;
+using WlanMemoryPtr = std::unique_ptr<void, WlanMemoryDeleter>;
 
 DWORD dwMaxClient = 2; //
 DWORD dwCurVersion = 0;
@@ -93,45 +132,48 @@ namespace wifi_scan_desktop {
     }
 
     // Return Cached Networks
-    // TODO throw may prevent free memory
     string getAvailableNetworks()
     {
         HANDLE hClient = NULL;
-        PWLAN_INTERFACE_INFO_LIST pIfList = NULL;
-        PWLAN_BSS_LIST pBssList = NULL;
-        PWLAN_BSS_ENTRY pBssEntry = NULL;
-        PWLAN_INTERFACE_INFO pIfInfo = NULL;
-
         DWORD dw = WlanOpenHandle(dwMaxClient, NULL, &dwCurVersion, &hClient);
         if (dw != ERROR_SUCCESS)
         {
-            throw "Error: WlanOpenHandle Failed " + dw;
+            throw WifiScanException("wlan_open_handle_failed", "WlanOpenHandle Failed with error code: " + to_string(dw));
         }
+        WlanHandlePtr hClientPtr(hClient);
+
+        PWLAN_INTERFACE_INFO_LIST pIfList = NULL;
         DWORD dw1 = WlanEnumInterfaces(hClient, NULL, &pIfList);
         if (dw1 != ERROR_SUCCESS)
         {
-            throw "Error: WlanEnumInterfaces Failed " + dw1;
+            throw WifiScanException("wlan_enum_interfaces_failed", "WlanEnumInterfaces Failed with error code: " + to_string(dw1));
         }
+        WlanMemoryPtr pIfListPtr(pIfList);
+
+        PWLAN_INTERFACE_INFO pIfInfo = NULL;
         if (pIfList->dwNumberOfItems > 0)
         {
             pIfInfo = (WLAN_INTERFACE_INFO *)&pIfList->InterfaceInfo[0];
         }
         else
         {
-            throw "Error: WlanEnumInterfacesEmpty " + dw1;
+            throw WifiScanException("wlan_enum_interfaces_empty", "WlanEnumInterfacesEmpty with error code: " + to_string(dw1));
         }
 
+        
+        PWLAN_BSS_LIST pBssList = NULL;
         DWORD dw4 = WlanGetNetworkBssList(hClient, &pIfInfo->InterfaceGuid, NULL, dot11_BSS_type_any, TRUE, NULL, &pBssList);
         if (dw4 != ERROR_SUCCESS)
         {
-            throw "Error: WlanGetNetworkBssList Failed " + dw4;
+            throw WifiScanException("wlan_get_network_bss_list_failed", "WlanGetNetworkBssList Failed with error code: " + to_string(dw4));
         }
+        WlanMemoryPtr pBssListPtr(pBssList);
 
         json network_list = json::array();
 
         for (unsigned int j = 0; j < pBssList->dwNumberOfItems; j++)
         {
-            pBssEntry = 
+            PWLAN_BSS_ENTRY pBssEntry = 
                 (WLAN_BSS_ENTRY *)&pBssList->wlanBssEntries[j];
 
             json values;
@@ -235,21 +277,6 @@ namespace wifi_scan_desktop {
             network_list.push_back(values);
         }
 
-        if (pIfList != NULL) {
-            WlanFreeMemory(pIfList);
-            pIfList = NULL;
-        }
-
-        if (pBssList != NULL) {
-            WlanFreeMemory(pBssList);
-            pBssList = NULL;
-        }
-
-        if (hClient != NULL) {
-            WlanCloseHandle(hClient, NULL);
-            hClient = NULL;
-        }
-
         return network_list.dump();
     }
 
@@ -257,31 +284,29 @@ namespace wifi_scan_desktop {
     void scan()
     {
         HANDLE hClient = NULL;
-        PWLAN_INTERFACE_INFO_LIST pIfList = NULL;
-        PWLAN_INTERFACE_INFO pIfInfo = NULL;
-
         DWORD dw = WlanOpenHandle(dwMaxClient, NULL, &dwCurVersion, &hClient);
         if (dw != ERROR_SUCCESS)
         {
-            throw "Error: WlanOpenHandle Failed " + dw;
+            throw WifiScanException("wlan_open_handle_failed", "WlanOpenHandle Failed with error code: " + to_string(dw));
         }
+        WlanHandlePtr hClientPtr(hClient);
+
+        PWLAN_INTERFACE_INFO_LIST pIfList = NULL;
         DWORD dw1 = WlanEnumInterfaces(hClient, NULL, &pIfList);
         if (dw1 != ERROR_SUCCESS)
         {
-            throw "Error: WlanEnumInterfaces Failed " + dw1;
+            throw WifiScanException("wlan_enum_interfaces_failed", "WlanEnumInterfaces Failed with error code: " + to_string(dw1));
         }
+        WlanMemoryPtr pIfListPtr(pIfList);
+
+        PWLAN_INTERFACE_INFO pIfInfo = NULL;
         if (pIfList->dwNumberOfItems > 0)
         {
             pIfInfo = (WLAN_INTERFACE_INFO *)&pIfList->InterfaceInfo[0];
         }
         else
         {
-            throw "Error: WlanEnumInterfacesEmpty " + dw1;
-        }
-
-        if (pIfList != NULL) {
-            WlanFreeMemory(pIfList);
-            pIfList = NULL;
+            throw WifiScanException("wlan_enum_interfaces_empty", "WlanEnumInterfacesEmpty with error code: " + to_string(dw1));
         }
 
         bool scanning = true;
@@ -295,18 +320,32 @@ namespace wifi_scan_desktop {
                                                  NULL);
         if (hResult != ERROR_SUCCESS)
         {
-            throw "Error: WlanRegisterNotification Failed " + hResult;
+            throw WifiScanException("wlan_register_notification_failed", "WlanRegisterNotification Failed with error code: " + to_string(hResult));
         }
 
         DWORD dw3 = WlanScan(hClient, &pIfInfo->InterfaceGuid, NULL, NULL, NULL);
         if (dw3 != ERROR_SUCCESS)
         {
-            throw "Error: WlanScan Failed " + dw3;
+            throw WifiScanException("wlan_scan_failed", "WlanScan Failed with error code: " + to_string(dw3));
         }
 
-        // TODO stop if timeout?
+        // 5 second timeout
+        // Wireless network drivers that meet Windows logo requirements are required to complete a WlanScan function request in 4 seconds.
+        // https://learn.microsoft.com/zh-cn/windows/win32/api/wlanapi/nf-wlanapi-wlanscan#remarks
+        DWORD startTime = GetTickCount();
+        const DWORD timeoutMs = 5000;
+
         while (scanning) {
             Sleep(100);
+            
+            DWORD currentTime = GetTickCount();
+            if (currentTime - startTime >= timeoutMs) {
+                scanning = false;
+                if (event_sink_) {
+                    event_sink_->Error("Scan Error", "Scan timeout after 5 seconds");
+                }
+                break;
+            }
         }
 
         WlanRegisterNotification(hClient,
@@ -316,7 +355,6 @@ namespace wifi_scan_desktop {
             NULL,
             NULL,
             NULL);
-        WlanCloseHandle(hClient, NULL);
     }
 
 // static
@@ -381,9 +419,9 @@ void WifiScanDesktopPlugin::HandleMethodCall(
                 scan();
                 result->Success();
             }
-            catch (const char* error)
+            catch (const WifiScanException& error)
             {
-                result->Error(error);
+                result->Error(error.getErrorCode(), error.getErrorMessage());
             }
         }
         else if(method_call.method_name() == "getAvailableNetworks")
@@ -393,9 +431,9 @@ void WifiScanDesktopPlugin::HandleMethodCall(
                 string available_networks = getAvailableNetworks();
                 result->Success(available_networks);
             }
-            catch (const char* error)
+            catch (const WifiScanException& error)
             {
-                result->Error(error);
+                result->Error(error.getErrorCode(), error.getErrorMessage());
             }
         }
         else
