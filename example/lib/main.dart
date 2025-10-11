@@ -36,11 +36,7 @@ class _MyAppState extends State<MyApp> {
               ElevatedButton(
                   onPressed: () async {
                     String? result = await _wifiScanDesktopPlugin.requestLocationPermission();
-                    if (result != null) {
-                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                        content: Text(result),
-                      ));
-                    }
+                    debugPrint("Permission result: $result");
                   },
                   child: const Text("Request Location Permission")),
             const SizedBox(width: 8),

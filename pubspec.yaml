@@ -4,7 +4,7 @@ version: 0.0.8
 homepage: https://github.com/LokieVikky/wifi_scan_windows
 
 environment:
-  sdk: '>=2.19.2 <3.0.0'
+  sdk: ">=2.19.2 <4.0.0"
   flutter: ">=2.5.0"
 
 dependencies:
