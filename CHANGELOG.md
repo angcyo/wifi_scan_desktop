@@ -28,3 +28,8 @@
 
 - **BUGFIX**: Fixed Invalid Redeclaration error on macos
 
+## 0.0.8
+
+- **FEATURE**: Added new function to request location permission in macos
+- **FEATURE**: Updated example app to request location permission in macos
+
