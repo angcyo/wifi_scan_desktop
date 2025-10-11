@@ -28,6 +28,11 @@ abstract class WifiScanDesktopPlatform extends PlatformInterface {
         'getAvailableNetworks() has not been implemented.');
   }
 
+  Future<String?> requestLocationPermission() {
+    throw UnimplementedError(
+        'requestLocationPermission() has not been implemented.');
+  }
+
   /// This will be used to throw error on other unsupported platforms
   void performScan(
       Function(dynamic) onScanCompleted, Function(dynamic) onScanError) {

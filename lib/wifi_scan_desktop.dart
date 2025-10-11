@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/material.dart';
 import 'package:wifi_scan_desktop/wifi_info.dart';
 import 'package:wifi_scan_desktop/wifi_scan_desktop_platform_interface.dart';
 
@@ -49,4 +50,15 @@ class WifiScanDesktop {
       rethrow;
     }
   }
+
+  Future<String?> requestLocationPermission() async {
+    try {
+      String? permissionStatus = await WifiScanDesktopPlatform.instance.requestLocationPermission();
+      return permissionStatus;
+    } catch (e) {
+      debugPrint(e.toString());
+      rethrow;
+    }
+  }
+
 }

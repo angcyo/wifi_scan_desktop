@@ -1,4 +1,5 @@
 import 'dart:core';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:wifi_scan_desktop/wifi_info.dart';
@@ -31,10 +32,21 @@ class _MyAppState extends State<MyApp> {
         appBar: AppBar(
           title: const Text('Plugin example app'),
           actions: [
+            if (Platform.isMacOS)
+              ElevatedButton(
+                  onPressed: () async {
+                    String? result = await _wifiScanDesktopPlugin.requestLocationPermission();
+                    if (result != null) {
+                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                        content: Text(result),
+                      ));
+                    }
+                  },
+                  child: const Text("Request Location Permission")),
+            const SizedBox(width: 8),
             ElevatedButton(
                 onPressed: () async {
-                  List<WifiInfo>? result =
-                      await _wifiScanDesktopPlugin.getAvailableNetworks();
+                  List<WifiInfo>? result = await _wifiScanDesktopPlugin.getAvailableNetworks();
                   setState(() {
                     availableNetworks = result ?? [];
                   });

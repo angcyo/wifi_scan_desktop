@@ -37,4 +37,15 @@ class MethodChannelWifiScanDesktop extends WifiScanDesktopPlatform {
       rethrow;
     }
   }
+
+  @override
+  Future<String?> requestLocationPermission() async{
+    try {
+      String? permissionStatus =
+          await methodChannel.invokeMethod<String>('requestLocationPermission');
+      return permissionStatus;
+    } catch (e) {
+      rethrow;
+    }
+  }
 }

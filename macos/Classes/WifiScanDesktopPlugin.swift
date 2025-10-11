@@ -7,6 +7,7 @@ import CoreLocation
 public class WifiScanDesktopPlugin: NSObject, FlutterPlugin {
     
     private var scanHandler: WifiScanStreamHandler
+    private var locationManager: LocationManager?
     
     init(scanHandler: WifiScanStreamHandler) {
         self.scanHandler = scanHandler
@@ -41,7 +42,13 @@ public class WifiScanDesktopPlugin: NSObject, FlutterPlugin {
             }catch let error{
                 result(error.localizedDescription)
             }
-            
+
+        case "requestLocationPermission":
+            self.locationManager = LocationManager()
+            self.locationManager?.requestAuthorization { status in
+                result(status)
+                self.locationManager = nil
+            }
         default:
             result(FlutterMethodNotImplemented)
         }
@@ -170,7 +177,7 @@ struct WiFiInfo: Codable {
 
 func gen_signal_quality(network: CWNetwork) -> Double{
     let ipol = LinearInterpolation(x: [-100,-50], y:[0,100] )
-    var signalQuality:Double = ipol.Interpolate(t: Double(network.rssiValue));
+    let signalQuality:Double = ipol.Interpolate(t: Double(network.rssiValue));
     return signalQuality;
 }
 
