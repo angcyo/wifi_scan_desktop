@@ -33,3 +33,6 @@
 - **FEATURE**: Added new function to request location permission in macos
 - **FEATURE**: Updated example app to request location permission in macos
 
+## 0.0.9
+
+- **BUGFIX**: Fixed request location permission in macos
