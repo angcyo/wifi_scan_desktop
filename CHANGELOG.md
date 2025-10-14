@@ -36,3 +36,4 @@
 ## 0.0.9
 
 - **BUGFIX**: Fixed request location permission in macos
+- **BUGFIX**: Fixed error in Windows when the SDK installed is not updated and the enum pBssEntry->dot11BssPhyType does not contain all possible values of the switch/case
