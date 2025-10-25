@@ -1,5 +1,12 @@
 <?code-excerpt path-base="excerpts/packages/url_launcher_example"?>
 
+```yaml
+  wifi_scan_desktop:
+    git:
+      url: git@github:com:angcyo/wifi_scan_desktop.git
+      ref: 0.0.8+1
+```
+
 # wifi_scan_desktop
 
 [![pub package](https://img.shields.io/pub/v/wifi_scan_desktop.svg)](https://pub.dev/packages/wifi_scan_desktop)
